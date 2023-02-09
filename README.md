@@ -11,7 +11,7 @@ Samotná detekce hran uvnitř komponenty probíhá tak, že se nejprve předbě�
 - Detekce čar z bitmapy
 - Jednoduchá úprava obrázků
 - Vykreslení bitmapy
-- Získání rozměrů obrázku a získání barvy bitmapy
+- Získání rozměrů obrázku a získání barvy pixelu bitmapy
 
 ## Naprogramováno v
 - C# 
