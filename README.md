@@ -1,6 +1,6 @@
 # DetectLinesInPicture
 ## O Projektu
-Plugin do Grasshopperu určený pro detekci čar z obrázku.
+Plugin do Grasshopperu určený k detekci čar z obrázku.
 
 ## Naprogramováno v
 - C# 
