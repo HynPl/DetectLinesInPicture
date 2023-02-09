@@ -1,4 +1,5 @@
 # DetectLinesInPicture
+## O Projektu
 Plugin do Grasshopperu určený pro detekci čar z obrázku.
 
 ## Naprogramováno v
