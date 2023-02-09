@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "DetectLinesInPicture": {
+      "commandName": "Project"
+    },
+    "My debug": {
+      "commandName": "Project",
+      "commandLineArgs": "/nosplash /_Grasshopper"
+    }
+  }
+}

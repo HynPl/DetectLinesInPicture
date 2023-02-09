@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "kSI8zkqi/dVcN9351Zes6S22W2F7L97/x5iKkBChJCE7OM/RWi/E/dhM+0udVKKt4JDolKlHfX0L600HTxmkGw==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\GeftGames\\Desktop\\Publish\\source code\\v1\\DetectLinesInPicture\\DetectLinesInPicture.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\GeftGames\\.nuget\\packages\\grasshopper\\7.13.21348.13001\\grasshopper.7.13.21348.13001.nupkg.sha512",
+    "C:\\Users\\GeftGames\\.nuget\\packages\\rhinocommon\\7.13.21348.13001\\rhinocommon.7.13.21348.13001.nupkg.sha512"
+  ],
+  "logs": []
+}
