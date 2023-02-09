@@ -25,13 +25,14 @@ namespace DetectLinesInPicture {
         }
 
         protected unsafe override void SolveInstance(IGH_DataAccess DA) {
-            // naèíst
+            // Naèíst bitmapu
             Bitmap bitmap = null;
             if (!DA.GetData(0, ref bitmap)) {
                 DA.AbortComponentSolution();
                 return;
             } 
             
+            // Naèíst kvalita vykreslení
             double RawQuality = 0.5;
             if (DA.GetData(1, ref RawQuality)) {
                 if (RawQuality<=1) {
@@ -42,26 +43,31 @@ namespace DetectLinesInPicture {
             }
             int quality=(int)RawQuality;
 
+            // Naèíst prùhlednost
             double RawAlpha = 1.0;
             DA.GetData(2, ref RawAlpha);
             if (RawAlpha<0)RawAlpha=0;
             else if (RawAlpha>1)RawAlpha=1;
             int alpha=(int)(RawAlpha*255);
+            
+            // zcela transparentní, neøeš
             if (alpha==0){ 
                 DA.SetData(0, new Mesh());  
                 return;
             }
            
+            // Umístìní v projektu
             Point3d Point = new Point3d(0,0,0);
             DA.GetData(3, ref Point);
 
+            // Mìøítko v projektu
             Vector3d Vector = new Vector3d(1,1,0);
             DA.GetData(4, ref Vector);
 
-            int PictureWidth=bitmap.Width;
-            int PictureHeight=bitmap.Height;  
+            int PictureWidth=bitmap.Width, PictureHeight=bitmap.Height;  
             Rectangle rec = new Rectangle(0, 0, PictureWidth, PictureHeight);
-                       
+            
+            // K  rychlému procházení
             BitmapData data = bitmap.LockBits(rec, ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
 
             byte* pointer = (byte*)data.Scan0;
@@ -70,23 +76,25 @@ namespace DetectLinesInPicture {
             // Øádková optimalizace
             List<Tile> listTiles=new List<Tile>();
             {
-                int Stride=data.Stride;
-                double endWidth=((PictureWidth/quality)*quality)*Vector.X+Point.X;
+                int Stride=data.Stride;                
+                double endWidth=((PictureWidth/quality)*quality)*Vector.X+Point.X;// skuteèná pozice pro konec øádku
 
                 for (int y = 0; y < PictureHeight; y += quality) {
                     byte* row = pointer + y*Stride;
                     Color lastColor=Color.Transparent;
                     int start=-1;
 
-                    // Vykresli... jako slova v bloku
+                    // Vykresli... jako jednotlivá slova v bloku
                     for (int x = 0; x < PictureWidth; x += quality) {
                         byte* headR = row + x*3;
                         Color color=Color.FromArgb(alpha, *(headR + 2), *(headR + 1), *headR);   // ??? red <-> blue
 
                         if (start==-1) {
+                            // Stejná jako pøedchozí, dlaždice se uloží se pøíštì
                             start=x;
                             lastColor=color;
-                        } else if (color!=lastColor) { 
+                        } else if (color!=lastColor) {
+                            // Uložení dlaždice
                             listTiles.Add(new Tile{ X=start*Vector.X+Point.X, X2=x*Vector.X+Point.X, Y=y*Vector.Y+Point.Y, Color=lastColor});
                             lastColor=color;
                             start=x;                            
@@ -99,12 +107,15 @@ namespace DetectLinesInPicture {
                     }
                 }
             }
+            bitmap.UnlockBits(data);
 
             // Vytvoø mesh
             Mesh mesh=new Mesh();
 
             // Pøidat tile
             foreach (Tile title in listTiles) title.AddFace(mesh,quality);
+
+            // Spoèítej normály
             mesh.Normals.ComputeNormals();
        
             // Pøiøadit tile barvu
@@ -114,9 +125,10 @@ namespace DetectLinesInPicture {
                 foreach (Tile tile in listTiles) tile.AddColor(mesh, ii+=4);
             }
 
+            // Optimalizace
             mesh.Compact();
-            bitmap.UnlockBits(data);
 
+            // Odeslat
             DA.SetData(0, mesh);
         }
                 

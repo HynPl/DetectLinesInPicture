@@ -25,27 +25,29 @@ namespace DetectLinesInPicture {
 
         protected unsafe override void SolveInstance(IGH_DataAccess DA) {
 
-            // Získat vstup
+            // Získat vstupní obrázek
             Bitmap bitmap=null;
             if (!DA.GetData(0, ref bitmap)) { 
                 DA.AbortComponentSolution();
                 return;
             }
 
+            // Získat minimální šedou
             double rawGrayLevelMin=0d;
             DA.GetData(1, ref rawGrayLevelMin);
             int GrayLevelMin=(int)rawGrayLevelMin;
             
+            // Získat maximální šedou
             double rawGrayLevelMax=255d;
             DA.GetData(2, ref rawGrayLevelMax);
             int GrayLevelMax=(int)rawGrayLevelMax;
 
+            // Převrátit bílou a černou ?
             bool rawRevOut=true;
             DA.GetData(3, ref rawRevOut);
             bool reverseOut=rawRevOut;
 
-            int PictureWidth=bitmap.Width;
-            int PictureHeight=bitmap.Height;
+            int PictureWidth=bitmap.Width, PictureHeight=bitmap.Height;
 
             Rectangle recSize=new Rectangle(0,0, PictureWidth, PictureHeight);
             Bitmap bitmapNew=bitmap.Clone(recSize, PixelFormat.Format24bppRgb);
@@ -56,6 +58,7 @@ namespace DetectLinesInPicture {
             int Stride=dataNew.Stride;
 
             if (reverseOut) {
+                // Projít po pixelech, nezávisle řádky v jádrách
                 Parallel.For(0, PictureHeight, (y, state) => {
                     byte* rowW=fromW+y*Stride;
 
@@ -78,6 +81,7 @@ namespace DetectLinesInPicture {
                     }
                 });
             } else {
+                // Projít po pixelech, nezávisle řádky v jádrách
                 Parallel.For(0, PictureHeight, (y, state) => {
                     byte* rowW=fromW+y*Stride;
 

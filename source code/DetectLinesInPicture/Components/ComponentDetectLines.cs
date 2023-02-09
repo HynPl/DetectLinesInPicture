@@ -32,14 +32,11 @@ namespace DetectLinesInPicture {
 
         protected override void RegisterOutputParams(GH_OutputParamManager pManager) {
             pManager.AddGenericParameter("Curves", "Curves", "K¯ivky\nCurves (curve can be line)", GH_ParamAccess.list);  
-            #if DEBUG
-            pManager.AddGenericParameter("Bitmap", "Bitmap", "Obr·zek\nBitmap image", GH_ParamAccess.item);
-            #endif
         }
 
         protected unsafe override void SolveInstance(IGH_DataAccess DA) {
 
-            // Set up varibles
+            // nastavit promÏnnÈ
             Bitmap bitmapOriginal = null;
             double RawTickness = 3.0;
             double quality=0.5;
@@ -54,17 +51,18 @@ namespace DetectLinesInPicture {
             Point3d TransformLocation = new Point3d(0,0,0);
             int tickness;
 
-            // Load inputs
+            // naËÌst
             if (!DA.GetData(0, ref bitmapOriginal)) {
                 DA.AbortComponentSolution();
                 return;
             } 
             
-            int PictureWidth=bitmapOriginal.Width;
-            int PictureHeight=bitmapOriginal.Height;  
+            // RozmÏry obr·zku
+            int PictureWidth=bitmapOriginal.Width, PictureHeight=bitmapOriginal.Height;  
             Rectangle rec = new Rectangle(0, 0, PictureWidth, PictureHeight);
             Bitmap bitmap = bitmapOriginal.Clone(rec, PixelFormat.Format24bppRgb);
 
+            // Tlouöùka Ëar
             if (DA.GetData(2, ref RawTickness)) {
                 if (RawTickness<=0) {
                     AddRuntimeMessage(GH_RuntimeMessageLevel.Error,"Tickness should be bigger than zero");
@@ -74,106 +72,118 @@ namespace DetectLinesInPicture {
             }
             tickness=(int)(RawTickness+0.5f);
 
-            // Self close
+            // P¯ipojenÌ k ostatnÌm
             DA.GetData(3, ref RawConnectToOthers);
             float connectToOthers=(float)RawConnectToOthers;
 
-
+            // P¯ipojenÌ sebe
             DA.GetData(4, ref RawConnectToSelf);
             float connectConnectToSelf=(float)RawConnectToSelf;
 
+            // P¯ipojenÌ k tÏlu
             DA.GetData(5, ref RawConnectToBody);
             float connectToBody=(float)RawConnectToBody; 
             
+            // ZjednoduöenÌ
             DA.GetData(6, ref RawSimplify);
             float simplify=(float)RawSimplify;
 
+            // Ignorov·nÌ pro p¯edbÏûnÈ
             DA.GetData(7, ref RawIgnore);
             int ignore=(int)RawIgnore;
             if (ignore<1)ignore=1;
             if (ignore>255)ignore=255;
 
+            // Ignorov·nÌ pro detekci Ëar
             DA.GetData(8, ref RawIgnore2);
             int ignore2=(int)RawIgnore2;
             if (ignore2<1)ignore2=1;
             if (ignore2>255)ignore2=255;
             DA.GetData(9, ref ClosedOnly);
 
+            // Pozice v projektu
             DA.GetData(10, ref TransformLocation);
             DA.GetData(11, ref TransformVector);
 
+            // Tlouöùka Ëar v obr·zku 
+            PacMan.DistanceMin=tickness;
+            PacMan.DistanceMax=tickness+1;
+            PacMan.DistanceMinD=PacMan.DistanceMin;
+            PacMan.DistanceMaxD=PacMan.DistanceMax;
 
-            PackMan.DistanceMin=tickness;
-            PackMan.DistanceMax=tickness+1;
-
-            PackMan.DistanceMinD=PackMan.DistanceMin;
-            PackMan.DistanceMaxD=PackMan.DistanceMax;
-
+            // Kvalita p¯edbÏûnÈho hled·nÌ
             if (!DA.GetData(1, ref quality)) {
                 quality=0.5;
             }
            
-            PackMan.PictureHeight=PictureHeight;
-            PackMan.PictureWidth=PictureWidth;
+            // Pacman m· zn·t rozmÏry obr·zku
+            PacMan.PictureHeight=PictureHeight;
+            PacMan.PictureWidth=PictureWidth;
                       
             BitmapData data = bitmap.LockBits(rec, ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
 
+            // Pozice obr·zku v pamÏti
             byte* pointer = (byte*)data.Scan0;
-            PackMan.Pointer=pointer;
-            PackMan.Stride=data.Stride;
+            PacMan.Pointer=pointer;
 
-            // Clean image, one chanel for source, one for already solved
+            // äÌ¯ka obr·zku*3
+            PacMan.Stride=data.Stride;
+
+            // vyËisti obr·zek, jeden kan·l zachovat, jeden k oznaËov·nÌ kde uû se detekce ¯eöila, jeden aù znÌ pr·znou
             {
                 byte* pointerClean=pointer+1;
                 int to=rec.Width*rec.Height*3;
                 byte* pointerCleanTo=pointerClean+to;
                 for (; pointerClean<pointerCleanTo; pointerClean+=3) *pointerClean = 0;
 
-                // useless, maybe debug only
+                // ZbyteËnÈ, moûn· pro dev
                 pointerClean=pointer+2;
                 for (; pointerClean<pointerCleanTo; pointerClean+=3) *pointerClean = 0;
             }
 
-            // Analyze image
+            // P¯edbÏûnÈ analyzov·nÌ pot¯ebuje rozmÏry obr·zku
             Analyzator.PictureWidth=PictureWidth;
             Analyzator.PictureHeight=PictureHeight;
             Analyzator.Stride=data.Stride;
             Analyzator.Pointer=pointer;
-            int min=1;
-            int max;
+
+            // Je menöÌ öÌ¯ka nebo v˝öka?
+            int min=1, max;
             if (PictureWidth<PictureHeight) max=bitmap.Height/2;
             else max=bitmap.Width/2;
 
+            // Vz·lenosti pro p¯edbÏûnÈ hled·nÌ
             Analyzator.NextPoint=(int)(min+(max-min)*(1-quality));
             List<DInt> PreAnalyzed=Analyzator.Analyze(ignore);
            
-            float limitDistanceToConnectToOthers =tickness*connectToOthers ;
-            float limitDistanceToConnectToSelf=tickness*connectConnectToSelf;
-            float limitDistanceToConnectToBody=tickness*connectToBody;
+            // V˝poËet pixelovÈ vzd·lenosti pro napojov·nÌ
+            float limitDistanceToConnectToOthers= tickness*connectToOthers ;
+            float limitDistanceToConnectToSelf  = tickness*connectConnectToSelf;
+            float limitDistanceToConnectToBody  = tickness*connectToBody;
 
             List<MyPolyline> polylines=new List<MyPolyline>();
             foreach (DInt pt in PreAnalyzed) {
                 
-                // Ze st¯edo na levo a na pravo  <<-<X>->>
+                // Ze st¯edu na levo a na pravo  <<-<X>->>
                 MyPolyline 
                     left=RunPackMann(), 
                     right=RunPackMann();
 
                 MyPolyline RunPackMann(){
-                    PackMan packMan = new PackMan(pt.X, pt.Y);
+                    PacMan packMan = new PacMan(pt.X, pt.Y);
 
                     List<DIntB> Points = new List<DIntB>();
                     for (int i = 0; i < 1000; i++) {
 
-                        // Gde be ses muhls p¯esonÛt
+                        // Kde by ses mohl p¯esunout
                         TInt item = packMan.FindNextPoint(i==0);
 
-                        // NÈni gde se p¯esonÛt
+                        // NenÌ kde se p¯esonout
                         if (item.X == -1) {
                             break;
                         }
 
-                        // NemÏlo by nastat, ale co uû vezkÛöÈ
+                        // NemÏlo by nastat, ale co uû vezkouöÈ
                         if (item.X==packMan.currentPosX && item.Y==packMan.currentPosY) {
 
                             // Zkus odÏlat smeËko
@@ -198,35 +208,38 @@ namespace DetectLinesInPicture {
                         if (item.N>0 && item.N<ignore2) break;
 
                         // Packmann: Tady jsem uû byl, dalöÌ to tady ¯eöit nebudou 
-                        // ZaplÚ aktu·lni pozeco
-                        /*if (Points.Count>0)*/PackMan.SetValueArea(packMan.currentPosX, packMan.currentPosY, tickness-1, 1);
+                        // ZaplÚ aktu·lni pozico
+                        PacMan.SetValueArea1(packMan.currentPosX, packMan.currentPosY, tickness-1, 1);
 
-                        // packMan.SetValueArea(item.X, item.Y, (int)(tickness-1/**connect*/), 1);
-                       
                         if (Points.Count > 2) {
                             DIntB last=Points[Points.Count - 1];
                             DIntB prevLast=Points[Points.Count - 2];
                             int x = (last.X + prevLast.X) / 2;
                             int y = (last.Y + prevLast.Y) / 2;
-                            PackMan.SetValueArea(x, y, tickness/*+1*/, 1);
+                            PacMan.SetValueArea1(x, y, tickness, 1);
                         }
-                                                
+                                            
+                        // Mezi dvÏmi body souËastn˝m a minul˝m, oznaË ûe tady byl
                         if (Points.Count==3) { 
-                            PackMan.SetValueArea2(Points[0].X, Points[0].Y, tickness, 2);
-                            PackMan.SetValueArea(Points[1].X, Points[1].Y, tickness, 0);
+                            PacMan.SetValueArea2(Points[0].X, Points[0].Y, tickness, 2);
+                            PacMan.SetValueArea1(Points[1].X, Points[1].Y, tickness, 0);
 
                             DIntB last=Points[0];
                             DIntB prevLast=Points[1];
                             int x = (last.X + prevLast.X) / 2;
                             int y = (last.Y + prevLast.Y) / 2;
-                            PackMan.SetValueArea(x, y, tickness/*+1*/, 1);
+                            PacMan.SetValueArea1(x, y, tickness, 1);
                         }
 
+                        // P¯ipojov·nÌ k zaË·tku polyline
                         if (Points.Count > 7 && Points.Count>(int)limitDistanceToConnectToSelf+1) {
                             DIntB start = Points[0];
+                            
+                            // Vzd·lenost zaË·tku a souËastnÈho bodu
                             int dX = start.X - item.X, dY = start.Y - item.Y;
-
                             double dis = Math.Sqrt(dX*dX + dY*dY);
+
+                            
                             if (dis < limitDistanceToConnectToSelf/3) {
                                 Points.Add(new DIntB(start.X, start.Y, true));
                                 Points[0].SetN(true);
@@ -236,41 +249,38 @@ namespace DetectLinesInPicture {
 
                         // Spojit zaË·tek a konec
                         if (item.N==-2) { 
-                            PackMan.SetValueArea2(Points[0].X, Points[0].Y, tickness, 1);
+                            PacMan.SetValueArea2(Points[0].X, Points[0].Y, tickness, 1);
                             Points.Add(new DIntB(Points[0].X, Points[0].Y,true));
                             Points[0].SetN(true);
                             break;
                         }
 
-                        // P¯esoÚ packmanna na novÛ pozeco
+                        // P¯esuÚ packmanna na novou pozicu
                         Points.Add(new DIntB(item.X, item.Y,false));
                         packMan.SetPosition(item.X, item.Y);
                     }
                 
-                    // SamotÈ bod nem· ani ceno ¯eöet
+                    // SamotÈ bod nem· ani cenu ¯eöit
                     if (Points.Count == 0) return null;
                     if (Points.Count == 1) { 
                         DIntB p=Points[0];
-                    //    PackMan.SetValueArea(p.X, p.Y, tickness+1, 0);
                         return null;
                     }
 
-                 //   PackMan.SetValueArea(Points[0].X, Points[0].Y, tickness-1, 0);
-                    PackMan.SetValueArea2(Points[0].X, Points[0].Y, tickness, 1);
-                    MyPolyline polyline=new MyPolyline(Points/*, false, false*/);
+                    PacMan.SetValueArea2(Points[0].X, Points[0].Y, tickness, 1);
+                    MyPolyline polyline=new MyPolyline(Points);
                     return polyline;
                 }
                 
                 // Propoj na pravo a na levo  E<<<<SXS>>>>E  =>   S>>>>X>>>>E
                 if (left!=null && right!=null) { 
-                    //if (left.Points[0].X==right.Points[0].X && left.Points[0].Y==right.Points[0].Y)
-                    //    continue;
+                    // Spoj polyline vych·zejÌcÌho z jednÈho p¯edbÏûnÈho mÌsta
                     if (left.TryMergeWith(right)) { 
                         polylines.Add(left);
-                        PackMan.SetValueArea(left.Points[0].X, left.Points[0].Y, tickness+1, 1);
-                        PackMan.SetValueArea(right.Points[0].X, right.Points[0].Y, tickness+1, 1);
+                        PacMan.SetValueArea1(left.Points[0].X, left.Points[0].Y, tickness+1, 1);
+                        PacMan.SetValueArea1(right.Points[0].X, right.Points[0].Y, tickness+1, 1);
                     } else { 
-                        // Add polylines to list
+                        // PoËÌtat s toutou polyline 
                         polylines.Add(left);
                         polylines.Add(right);
                     }                    
@@ -279,15 +289,14 @@ namespace DetectLinesInPicture {
 
                     if ((polyline=left!=null ? polyline=left : (right!=null) ? polyline=right : null) != null) {
                         // Try close self
-                        if (!polyline.TryCloseSelf(limitDistanceToConnectToSelf, (int)connectConnectToSelf+2)) PackMan.SetValueArea(polyline.Points[0].X, polyline.Points[0].Y, tickness, 1);
+                        if (!polyline.TryCloseSelf(limitDistanceToConnectToSelf, (int)connectConnectToSelf+2)) PacMan.SetValueArea1(polyline.Points[0].X, polyline.Points[0].Y, tickness, 1);
                         
-                        // Add polyline to list
+                        // PoËÌtat s toutou polyline 
                         polylines.Add(polyline);
                     } 
                 }
             }            
-            
-           
+                      
 
             // Connect polylines
             // Zkus napojit na jinou smyËku jak na vlastni
@@ -296,9 +305,11 @@ namespace DetectLinesInPicture {
 
                 DIntB end=pFrom.Points[pFrom.Points.Count-1];
 
+                // NejlepöÌ indexy kde p¯ipojit
                 int nearestS=-1,
                     nearestE=-1;
 
+                // NejlepöÌ vzd·lenosti-nejkratöÌ
                 double 
                     disEndToStart=0,
                     disEndToEnd=0;                    
@@ -306,13 +317,16 @@ namespace DetectLinesInPicture {
                 for (int j=0; j<polylines.Count; j++) {
                     MyPolyline pTo = polylines[j];
 
-                    // End to start
+                    // Zkus p¯ipojit konec a zaË·tek
                     if (!pTo.Start) {
-                        // try connect to starting point
                         DIntB Tstart = pTo.Points[0];
+
+                        // Vzd·lenost jednÈ polyline konce a zaË·tku druhÈ polyline
                         int dX = Tstart.X - end.X, 
                             dY = Tstart.Y - end.Y;
                         double Tdis = Math.Sqrt(dX*dX + dY*dY);
+
+                        // Jesli je moûnÈ bod p¯ipojit
                         if (Tdis <= limitDistanceToConnectToOthers) {
                             if (Tdis<disEndToStart) { 
                                 nearestS=j; 
@@ -321,13 +335,17 @@ namespace DetectLinesInPicture {
                         }
                     } 
 
-                    // end to end
+                    // Zkus p¯ipojit koncov˝ bod
                     if (!pTo.End) {
-                        // try connect to ending point
+                        
                         DIntB Tend=pTo.Points[pTo.Points.Count-1];
+
+                        // Vzd·lenost jednÈ polyline konce a zaË·tku druhÈ polyline
                         int dX=Tend.X-end.X, 
                             dY=Tend.Y-end.Y;
                         double Tdis2=Math.Sqrt(dX*dX + dY*dY);
+
+                        // Jesli je moûnÈ bod p¯ipojit
                         if (Tdis2<=limitDistanceToConnectToOthers) {
                             if (Tdis2<disEndToEnd) { 
                                 nearestE=j;
@@ -337,8 +355,10 @@ namespace DetectLinesInPicture {
                     }                       
                 }
                 
+                // konec se nep¯ipojije ke konci
                 if (pFrom.End) continue;
 
+                // Jak spojovat polyline
                 if (nearestS!=-1 && nearestE!=-1) { 
                     if (disEndToStart<disEndToEnd) {
                         CTS();
@@ -351,28 +371,22 @@ namespace DetectLinesInPicture {
                     CTE();
                 }
 
+                // Funce s p¯ipojenÌm na zaË·tek
                 void CTS() {                    
                     MyPolyline pl=polylines[nearestS];
-                    DIntB Tstart=pl.Points[0];
-                   
+                    DIntB Tstart=pl.Points[0];                   
                     pl.Points[0].SetN(true);
-                   // pFrom.Points.Add(Tstart);
-                    //pFrom.End=true;
 
                     pFrom.AddClosingEndPoint(Tstart);
-                  //  pl.Start=true;
                 }
+
+                // Funce s p¯ipojenÌm na konec
                 void CTE() {
                     MyPolyline pl=polylines[nearestE];
                     DIntB Tend=pl.Points[pl.Points.Count-1];
-                    //if (Tend.X==pl.GetPointEnd().X && Tend.Y==pl.GetPointEnd().Y) { 
-                    //    return;  
-                    //}
 
                     pFrom.AddClosingEndPoint(Tend);
-                   // pFrom.Points.Add(Tend);
                     pl.End=true;
-                   // pFrom.End=true;
                 }    
             }
                
@@ -381,7 +395,7 @@ namespace DetectLinesInPicture {
                 // Uzav¯en· smyËka, ne¯eö 
                 if (polyline.Start && polyline.End) continue;
 
-                // Connect start to somewhere
+                // P¯ipoj svou smyËku od nÏkuÔ k zaË·tku
                 if (!polyline.Start) { 
                     int result = polyline.NearPointToSelfPointStart(limitDistanceToConnectToBody, (int)connectToBody+1);
 
@@ -389,29 +403,16 @@ namespace DetectLinesInPicture {
                         DIntB pt=polyline.Points[result];
                         polyline.Points[result].SetN(true);
                         polyline.AddClosingStartPoint(pt);
-                        //if (pt.X==polyline.Points[0].X && pt.Y==polyline.Points[0].Y) { 
-                        //    polyline.Start=true;
-                        //}else{
-                        //    polyline.Start=true;
-                        //    polyline.Points.Insert(0, pt);
-                        //}
                     }
                 } 
                 
+                // P¯ipoj svou smyËku od nÏkuÔ ke konci
                 if (!polyline.End) { 
                     int result = polyline.NearPointToSelfPointEnd(limitDistanceToConnectToBody, (int)connectToBody+1);
 
                     if (result!=-1) { 
                         DIntB pt=polyline.Points[result];
                         polyline.AddClosingEndPoint(pt);
-                        //polyline.Points[result].SetN(true);
-                        ////pt.N=true;
-                        //if (pt.X==polyline.GetPointEnd().X && pt.Y==polyline.GetPointEnd().Y) { 
-                        //    polyline.End=true;
-                        //}else{
-                        //    polyline.Points.Add(pt);
-                        //    polyline.End=true;
-                        //}
                     }
                 }
             }
@@ -421,66 +422,53 @@ namespace DetectLinesInPicture {
                 // Uzav¯en· smyËka, ne¯eö 
                 if (polyline.Start && polyline.End) continue;
 
-                // Connect start to somewhere
+                // P¯ipoj nÏkde zaË·tek
                 if (!polyline.Start) { 
                     DIntB start=polyline.Points[0];
 
                     (MyPolyline, int) result = MyPolyline.NearPointToPoint(polylines, limitDistanceToConnectToBody, start, polyline);
                     if (result.Item1!=null) { 
-                        DIntB pt=result.Item1.Points[result.Item2];                        
-                        result.Item1.Points[result.Item2].SetN(true);
-                        //pt.N=true;
+                        DIntB pt=result.Item1.Points[result.Item2];    
+                        result.Item1.Points[result.Item2].SetN(true); // Oznam ûe je p¯ipojenÈ
                         polyline.AddClosingStartPoint(pt);
-                        //if (pt.X==polyline.Points[0].X && pt.Y==polyline.Points[0].Y) { 
-                        //    //break;    
-                        //    polyline.Start=true;
-                        //}else{
-                        //    polyline.Points.Insert(0, pt);
-                        //    polyline.Start=true;
-                        //}
                     }
                 } 
                 
+                // P¯ipoj nÏkde konec
                 if (!polyline.End) { 
                     DIntB end=polyline.Points[polyline.Points.Count-1];
 
                     (MyPolyline, int) result = MyPolyline.NearPointToPoint(polylines, limitDistanceToConnectToBody, end, polyline);
                     if (result.Item1!=null) { 
                         DIntB pt=result.Item1.Points[result.Item2];
-                        result.Item1.Points[result.Item2].SetN(true);
+                        result.Item1.Points[result.Item2].SetN(true); // Oznam ûe je p¯ipojenÈ
                         polyline.AddClosingEndPoint(pt);
-                       // pt.N=true;
-                        //if (pt.X==polyline.GetPointEnd().X && pt.Y==polyline.GetPointEnd().Y) { 
-                        ////    break;
-                        //    polyline.End=true;
-                        //}else{
-                        //    polyline.Points.Add(pt);
-                        //    polyline.End=true;
-                        //}
                     }
                 }
             }
              
-            
+            // Optimalizace stejn˝ch bod˘ - nemÏla byt Ëast· 
             foreach (MyPolyline pol in polylines) { 
                 DIntB lastPoint=pol.Points[0];
 
                 for (int i = 1; i < pol.Points.Count; i++) {
                     DIntB pt=pol.Points[i];
                     if (pt.X==lastPoint.X && pt.Y==lastPoint.Y) { 
+
+                        // Smaû stejnÈ body, zkontrolovat jestli jsou p¯ipojenÈ, p¯ipojenost zachovat
                         if (lastPoint.N && pt.N) {
                             pol.Points.RemoveAt(i);
                             i--;
                             continue;
-                        }else if (lastPoint.N && !pt.N) {
+                        } else if (lastPoint.N && !pt.N) {
                             pol.Points.RemoveAt(i);
                             i--;     
                             continue;                       
-                        }else if (!lastPoint.N && pt.N) {
+                        } else if (!lastPoint.N && pt.N) {
                             pol.Points.RemoveAt(i-1);
                             i--;    
                             continue;                        
-                        }else if (!lastPoint.N && !pt.N) {
+                        } else if (!lastPoint.N && !pt.N) {
                             pol.Points.RemoveAt(i);
                             i--;   
                             continue;
@@ -490,87 +478,43 @@ namespace DetectLinesInPicture {
                 }
             }
 
-            // Convert
+            // Konvertuj pro v˝stup
             List<Polyline> pls2 = new List<Polyline>();
             foreach (MyPolyline pol in polylines) {  
+                // P¯i pouze uzav¯en˝ch neodesÌlat nep¯ipojenÈ
                 if (ClosedOnly) {
-                    if (!pol.Start || !pol.End)continue;
+                    if (!pol.Start || !pol.End) continue;
                 }
+
                 int len=pol.Points.Count;
-                List<Point3d> pnts3d = new List<Point3d>(){Capacity=len}; 
+                List<Point3d> pnts3d = new List<Point3d>(){ Capacity=len }; 
             
-                // Symplify polyline       
+                // ZjednoduöenÌ polyline     
                 DIntB[] sympfifiedPoints;                    
                 if (simplify==0) sympfifiedPoints=pol.Points.ToArray();
                 else sympfifiedPoints=SimplifyPolyline.Reduce(pol.Points.ToArray(), simplify);
 
-                // NemÏlo by nastat
+                // NemÏlo by nastat, kdyû nastave tak nezjednuöuj
                 if (sympfifiedPoints.Length<=2) sympfifiedPoints=pol.Points.ToArray();
 
+                // P¯eveÔ body z DIntB na Point3d
                 for (int i = 0; i < sympfifiedPoints.Length; i++) {
                     DIntB pt=sympfifiedPoints[i];
                     pnts3d.Add(new Point3d(pt.X*TransformVector.X+TransformLocation.X, pt.Y*TransformVector.Y+TransformLocation.Y, 0));
                 }
 
-                Polyline pl=new Polyline(pnts3d);
-                pls2.Add(pl); 
+                // Zapsat v˝sledek
+                pls2.Add(new Polyline(pnts3d)); 
             }
             
             bitmap.UnlockBits(data);
-            #if DEBUG
-            // edit for output
-            {
-                BitmapData data2 = bitmap.LockBits(rec, ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
-                int Stride=data2.Stride;
-                byte* pointerS=(byte*)data.Scan0;
-                byte* pointerEdit=pointerS;
-                int to=rec.Height*Stride;
-                byte* pointerEditTo=pointerEdit+to;
 
-                for (; pointerEdit<pointerEditTo; pointerEdit+=3) {
-                    if (*pointerEdit<100) *pointerEdit+=100;
-
-                    if (*(pointerEdit+1)==1) *(pointerEdit+1)=100;
-                }
-
-                foreach (MyPolyline pl in polylines) {
-                    DIntB start=pl.GetPointStart();
-                    SetValueAreaBlue(start.X, start.Y, 4, 200);
-
-                    DIntB end=pl.GetPointEnd();
-                    SetValueAreaBlue(end.X, end.Y, 6, 100);
-                }
-
-                void SetValueAreaBlue(int x, int y, int radius, byte value) { 
-                    for (int iy=-radius; iy<=radius; iy++) {
-                        int posY=y+iy;
-                        for (int ix=-radius; ix<=radius; ix++) { 
-                            if (Math.Sqrt(ix*ix + iy*iy) <= radius) {
-                                int posX=x+ix;
-
-                                if (posX<0) continue;
-                                if (posY<0) continue;
-                                if (posX>=PictureWidth) continue;
-                                if (posY>=PictureHeight) continue;
-
-                                *(pointerS + Stride*posY+posX*3+2)=value;
-                            }
-                        }
-                    }
-                }  
-                
-                bitmap.UnlockBits(data2);
-            }
-            #endif
-            try{
+            try {
                 DA.SetDataList(0, pls2);
-            }catch{
+            } catch {
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Nepoda¯ilo se odeslat data do Grasshopperu\nCannot send data to Grasshopper");
                 DA.AbortComponentSolution();
             }
-            #if DEBUG
-            DA.SetData(1, bitmap);
-            #endif
         }
                 
         protected override Bitmap Icon => Properties.Resources.detect;

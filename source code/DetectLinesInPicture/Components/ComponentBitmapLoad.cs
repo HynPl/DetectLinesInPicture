@@ -21,16 +21,19 @@ namespace DetectLinesInPicture {
 
         protected unsafe override void SolveInstance(IGH_DataAccess DA) {
             string file="";
-           
+            // Načtení cesty k obrázku
             if (!DA.GetData(0, ref file)) { 
                 DA.AbortComponentSolution();
                 return;
             }
+
+            // Jestli soubor existuje
             if (!File.Exists(file)) { 
                 DA.AbortComponentSolution();
                 return;
             }
             
+            // Načíst obrázek do paměti
             Bitmap bitmap;
             try {
                 bitmap=(Bitmap)Image.FromFile(file);
@@ -38,6 +41,8 @@ namespace DetectLinesInPicture {
                 DA.AbortComponentSolution();
                 return;
             }
+
+            // Nutné obrázek převést
             if (bitmap.PixelFormat!=System.Drawing.Imaging.PixelFormat.Format24bppRgb) { 
                 DA.SetData(0, Convert(bitmap));
 
@@ -46,15 +51,9 @@ namespace DetectLinesInPicture {
             } else DA.SetData(0, bitmap);
         }
 
-        Bitmap Convert(Bitmap orig){
+        // Převedení obrázku do RGB
+        Bitmap Convert(Bitmap orig) {
             return orig.Clone(new Rectangle(0, 0, orig.Width, orig.Height), System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-
-            //Bitmap clone = new Bitmap(orig.Width, orig.Height,
-
-            //using (Graphics gr = Graphics.FromImage(clone)) {
-            //    gr.DrawImage(orig, new Rectangle(0, 0, clone.Width, clone.Height));
-            //} 
-            //return clone;
         }
 
         protected override Bitmap Icon => Properties.Resources.open;

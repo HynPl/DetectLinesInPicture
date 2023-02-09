@@ -34,8 +34,11 @@ namespace DetectLinesInPicture {
             // Zobrazit obrázek
             protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel) {
                 base.Render(canvas, graphics, channel); 
-                if (parent.bitmapPrev==null)return;
-                PointF p = Pivot;
+
+                // Obrázek není přiřazen
+                if (parent.bitmapPrev==null) return;
+
+                // w, h = vypočítat dle poměru stran
                 int w,h;
                 if (parent.bitmapPrev.Width<parent.bitmapPrev.Height){
                     w=80; 
@@ -44,6 +47,11 @@ namespace DetectLinesInPicture {
                     w=(int)(80*((float)parent.bitmapPrev.Width/parent.bitmapPrev.Height));
                     h=80;
                 }
+
+                // Pozice komponenty
+                PointF p = Pivot;
+
+                // vykreslit obrázek
                 graphics.DrawImage(parent.bitmapPrev,new Rectangle((int)p.X-10, (int)p.Y-h/2, w, h));
             }
         }

@@ -32,6 +32,7 @@ namespace DetectLinesInPicture {
                 return;
             }
 
+            // Jaká pozice pixelů je požadována
             List<Point3d> points=new List<Point3d>();
             if (!DA.GetDataList(1, points)) { 
                 DA.AbortComponentSolution();
@@ -50,7 +51,7 @@ namespace DetectLinesInPicture {
 
                 DA.SetDataList(0, colors);
 
-            // Metoda 2, pro hodně pixelů
+            // Metoda 2, pro hodně pixelů, nezávisle v jádrách
             } else {
                 int w=bitmap.Width, h=bitmap.Height, len=points.Count;
                 Rectangle rec=new Rectangle(0,0,w,h);

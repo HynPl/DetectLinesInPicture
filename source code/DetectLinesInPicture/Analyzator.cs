@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace DetectLinesInPicture {
     internal unsafe class Analyzator {
         public static int PictureWidth, PictureHeight;
-        public static byte* Pointer;
+        public static byte* Pointer;// Ukazatel začátek obrázku
         public static int Stride;
         public static int NextPoint=1;
 
@@ -77,9 +77,11 @@ namespace DetectLinesInPicture {
             return Points;
         }
 
+        // Získej barvu pixelu, červený kanál
         static int GetValue(int x, int y) => *(Pointer + Stride*y+x*3);
 
-        private static IEnumerable<int> SteppedIterator(int endIndex) {
+        // Pole, jehož prvky se zvyšují po nextpoint
+        static IEnumerable<int> SteppedIterator(int endIndex) {
             for (int i=0; i<endIndex; i+=NextPoint) yield return i;
         }
     }

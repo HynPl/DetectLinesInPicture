@@ -31,8 +31,8 @@ namespace DetectLinesInPicture {
                 return;
             }
 
-            int PictureWidth=bitmap.Width,
-                PictureHeight=bitmap.Height;
+            // Rozměr obrázku
+            int PictureWidth=bitmap.Width, PictureHeight=bitmap.Height;
             Rectangle recSize=new Rectangle(0,0, PictureWidth, PictureHeight);
             
             BitmapData dataOriginal=bitmap.LockBits(recSize, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
@@ -46,6 +46,7 @@ namespace DetectLinesInPicture {
 
             int Stride=dataOriginal.Stride;
 
+            // Projít po pixelech, nezávisle řádky
             Parallel.For(0, PictureHeight, (y, state) => {
                 int line = y * Stride;
                 byte* rowR = fromR + line,
@@ -57,6 +58,7 @@ namespace DetectLinesInPicture {
 
             bitmapNew.UnlockBits(dataNew);
 
+            // Odeskat výstup
             DA.SetData(0, bitmapNew);
 
             bitmap.UnlockBits(dataOriginal);

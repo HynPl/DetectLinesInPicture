@@ -2,15 +2,16 @@
 using System;
 
 namespace DetectLinesInPicture {
+    // Struktura s dvěmi celými čísly
     struct DInt : ICloneable{
-        public int X;
-        public int Y;
+        public int X, Y;
 
         public DInt(int x, int y) {
             X=x;
             Y=y;
         }
 
+        // Následuje nedůležité
         public object Clone() => MemberwiseClone();
 
         public override bool Equals(object obj) => obj is DInt o && X == o.X && Y == o.Y;
@@ -25,9 +26,9 @@ namespace DetectLinesInPicture {
         public Point3d ToPoint2d() => new Point3d(X,Y,0);
     }
 
-    internal class/*struct*/ DIntB : ICloneable{
-        public int X;
-        public int Y;
+    // Třída s dvěmi celými čísly a jednou hodnotou značící uzavřenost
+    internal class DIntB : ICloneable{
+        public int X, Y;
         public bool N;
 
         public DIntB(int x, int y, bool n) {
@@ -36,8 +37,10 @@ namespace DetectLinesInPicture {
             N=n;
         }
 
-        internal void SetN(bool value){ this.N=value; }
-
+        // Nastav hodnotu N
+        internal void SetN(bool value){ N=value; }
+                
+        // Následuje nedůležité...
         public static bool operator ==(DIntB a, DIntB b) => a.Equals(b);
 
         public static bool operator !=(DIntB a, DIntB b) => !a.Equals(b);
@@ -47,14 +50,13 @@ namespace DetectLinesInPicture {
         internal Point3d ToPoint2d() => new Point3d(X,Y,0);
 
         public override bool Equals(object obj){ 
-            if (obj is DIntB d){ 
+            if (obj is DIntB d) { 
                 if (X!=d.X) return false; 
                 if (Y!=d.Y) return false; 
                 if (N!=d.N) return false; 
                 return true;
             }
             return false;
-           // base.Equals(obj);
         }
 
         public override int GetHashCode() {
@@ -66,9 +68,9 @@ namespace DetectLinesInPicture {
         }
     }
 
+    // Struktura se třemi celými čísly, N je číslo pro hodnotu barvy
     struct TInt {
-        public int X;
-        public int Y;
+        public int X, Y;
         public int N;
         public TInt(int x, int y, int z) {
             X=x;
