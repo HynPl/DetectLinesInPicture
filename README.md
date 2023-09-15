@@ -8,7 +8,7 @@ Plugin do Grasshopperu určený k detekci čar z obrázku.
 Samotná detekce hran uvnitř komponenty probíhá tak, že se nejprve předběžně prohledá obrázek, zjistí se, kde je něco bílé. V druhém kroku komponenta vyšle z předběžných bílých míst „pac-many“ jdoucí po bílém. Průběžně se ukládá do seznamu kudyma šli. Jako když jde člověk po čerstvě napadlém sněhu, jdou vidět jeho stopy. V třetím kroku dojde k napojování seznamů cest. Na závěr dojde ke zjednodušení výsledku a exportu na křivky (Polyline).
 
 ## Více informací
--[http://scripting.molab.eu/tutorials/detekce-hran](http://scripting.molab.eu/tutorials/detekce-hran)
+- [http://scripting.molab.eu/tutorials/detekce-hran](http://scripting.molab.eu/tutorials/detekce-hran)
 
 ## Součásti pluginu
 - Detekce čar z bitmapy
